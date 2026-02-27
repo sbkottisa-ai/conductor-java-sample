@@ -64,6 +64,7 @@ include 'nats-streaming'
 include 'kafka-event-queue'
 
 include 'test-harness'
+include 'redis-persistence'
 
 rootProject.children.each {it.name="conductor-${it.name}"}
 
