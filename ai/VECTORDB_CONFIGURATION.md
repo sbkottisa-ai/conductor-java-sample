@@ -98,7 +98,7 @@ conductor:
       - name: "pinecone-search"
         type: "pinecone"
         pinecone:
-          apiKey: "your-pinecone-api-key"
+          apiKey: "Z3hQHQitNEPcMNGxbmE6mdChGjPeP95P"
 ```
 
 ### Mixed Configuration (Multiple Types)
