@@ -1,0 +1,88 @@
+name: Endor Labs SAST with AI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sast-pr:
+    name: Endor SAST + AI (PR)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write      # for SARIF upload (optional)
+      contents: read              # checkout
+      actions: read               # required for private SARIF upload
+      id-token: write             # keyless auth with Endor Labs
+      pull-requests: write        # PR comments for policy violations
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'microsoft'
+          java-version: '21'
+
+      - name: Build Package
+        run: ./gradlew clean build -x test
+
+      - name: Endor Labs SAST + AI (PR)
+        if: github.event_name == 'pull_request'
+        uses: endorlabs/github-action@v1   # pin to a commit SHA in prod
+        with:
+          namespace: 'sai-learn'
+          scan_sast: true                  # enable SAST :llmCitationRef[0]
+          scan_dependencies: false
+          scan_secrets: false
+          pr: true
+          enable_pr_comments: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # enable AI SAST triage
+          additional_args: '--ai-sast-analysis=agent-fallback'  # :llmCitationRef[1] :llmCitationRef[2]
+
+  sast-main:
+    name: Endor SAST + AI (main)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      repository-projects: read
+      pull-requests: read
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'microsoft'
+          java-version: '21'
+
+      - name: Build Package
+        run: ./gradlew clean build -x test
+
+      - name: Endor Labs SAST + AI (main)
+        if: ${{ github.event_name == 'push' }}
+        uses: endorlabs/github-action@v1
+        with:
+          namespace: 'sai-learn'
+          scan_sast: true
+          scan_dependencies: false
+          scan_secrets: false
+          pr: false
+          scan_summary_output_type: 'table'
+          sarif_file: 'sast-findings.sarif'
+          additional_args: '--ai-sast-analysis=agent-fallback'
+
+      - name: Upload SAST findings to GitHub
+        if: ${{ github.event_name == 'push' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'sast-findings.sarif'
